@@ -18,44 +18,42 @@ def main():
         )
         
         context = browser.new_context(
-            viewport={"width": 1280, "height": 800},
+            viewport={"width": 1280, "height": 900},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
         page = context.new_page()
 
         print("جاري فتح الصفحة...")
         page.goto("https://smartone-iptv.com/plugin/smart_one/main_generate", wait_until="domcontentloaded", timeout=60000)
-
         page.wait_for_timeout(3000)
 
-        print("محاولة إظهار قسم M3U Playlist...")
-        # النقر على تبويب M3U في حال وجود تبويبات مفعلة
-        try:
-            tab_btn = page.locator("a:has-text('M3u Playlist'), button:has-text('M3u Playlist'), :text('M3u Playlist')").first
-            if tab_btn.is_visible():
-                tab_btn.click()
-                page.wait_for_timeout(1000)
-        except Exception as e:
-            print(f"تخطي اختيار التبويب: {e}")
+        print("تحديد واختيار قسم M3u Playlist...")
+        # الضغط الفعلي على أيقونة M3u Playlist لتنشيط النموذج الخاص بها
+        m3u_tab = page.locator("div, p, span, a").filter(has_text="M3u Playlist").last
+        m3u_tab.click()
+        page.wait_for_timeout(2000)
 
-        print("تعبئة البيانات...")
-        # استخدام force=True لتعبئة الحقول حتى لو كانت مخفية بحيل CSS
-        mac_input = page.locator("input#mac, input.mac-1").first
-        mac_input.fill(mac_address, force=True)
+        print("تعبئة البيانات في النموذج النشط...")
+        
+        # اختيار العناصر المرئية حصراً (.filter(has_not_class="hidden") أو إيجاد الحقل المرئي)
+        visible_mac_input = page.locator("input#mac:visible, input[name='mac']:visible").first
+        visible_mac_input.fill(mac_address)
 
-        name_input = page.locator("input[name='name'], input[placeholder*='Vip']").first
-        name_input.fill(playlist_name, force=True)
+        visible_name_input = page.locator("input[placeholder*='Vip']:visible, input[name='name']:visible").first
+        visible_name_input.fill(playlist_name)
 
-        url_input = page.locator("input[name='url'], input[placeholder*='http']").first
-        url_input.fill(m3u_url, force=True)
+        visible_url_input = page.locator("input[placeholder*='http']:visible, input[name='url']:visible").first
+        visible_url_input.fill(m3u_url)
 
-        print("انتظار التحقق وإرسال النموذج...")
-        page.wait_for_timeout(4000)
+        print("انتظار التحقق من الكابتشا والجاهزية...")
+        page.wait_for_timeout(5000)
 
-        submit_btn = page.locator("button:has-text('Add Playlist')").first
-        submit_btn.click(force=True)
+        print("الضغط على زر Add Playlist المرئي...")
+        submit_btn = page.locator("button:has-text('Add Playlist'):visible").first
+        submit_btn.scroll_into_view_if_needed()
+        submit_btn.click()
 
-        print("تم إرسال الطلب بنجاح!")
+        print("تم إرسال البيانات بنجاح!")
         page.wait_for_timeout(5000)
         browser.close()
 
