@@ -13,31 +13,41 @@ def main():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        # استخدام المتصفح مع ضبط الأبعاد
-        context = browser.new_context(viewport={"width": 1280, "height": 720})
+        context = browser.new_context(
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
         page = context.new_page()
 
         print("جاري فتح الصفحة...")
-        page.goto("https://smartone-iptv.com/plugin/smart_one/main_generate")
+        page.goto("https://smartone-iptv.com/plugin/smart_one/main_generate", wait_until="networkidle")
+
+        print("انتظار ظهور حقل الـ MAC...")
+        # الانتظار والتفاعل باستخدام الـ ID المحدد بشكل دقيق
+        mac_input = page.locator("#mac")
+        mac_input.wait_for(state="visible", timeout=30000)
+        
+        # التمرير للحقل للتأكد من رؤيته
+        mac_input.scroll_into_view_if_needed()
 
         print("تعبئة البيانات...")
-        page.fill("input[name='mac']", mac_address)
-        page.fill("input[name='name']", playlist_name)
-        page.fill("input[name='url']", m3u_url)
+        mac_input.fill(mac_address)
 
-        # التعامل مع حماية Cloudflare / Turnstile
+        # استهداف باقي الحقول إما بالـ ID أو بالـ Placeholder المباشر
+        page.locator("input[placeholder='Vip List']").fill(playlist_name)
+        page.locator("input[placeholder='http://my-server.com/playlist_file.m3u']").fill(m3u_url)
+
         print("انتظار التحقق من الكابتشا (Cloudflare/Turnstile)...")
         try:
-            # الانتظار حتى يتم حل الكابتشا تلقائيًا أو إتاحة زر الإرسال
-            page.wait_for_selector("button:has-text('Add Playlist'):not([disabled])", timeout=20000)
-        except Exception:
-            print("تنبيه: الكابتشا تتطلب حلًا تفاعليًا أو انتظر وقتًا إضافيًا.")
+            # الانتظار حتى يصبح زر الإرسال نشطًا وقابلاً للضغط
+            submit_btn = page.locator("button:has-text('Add Playlist')")
+            submit_btn.wait_for(state="visible", timeout=20000)
+            submit_btn.click()
+            print("تم الضغط على زر الإرسال بنجاح.")
+        except Exception as e:
+            print(f"حدث خطأ أثناء الضغط على الزر: {e}")
 
-        print("الضغط على زر الإرسال...")
-        page.click("button:has-text('Add Playlist')")
-        
         page.wait_for_timeout(5000)
-        print("تمت العملية بنجاح!")
         browser.close()
 
 if __name__ == "__main__":
