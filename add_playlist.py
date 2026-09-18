@@ -12,7 +12,6 @@ def main():
         sys.exit(1)
 
     with sync_playwright() as p:
-        # تشغيل المتصفح مع إعدادات لتجاوز الحجب
         browser = p.chromium.launch(
             headless=True,
             args=['--no-sandbox', '--disable-setuid-sandbox']
@@ -25,27 +24,36 @@ def main():
         page = context.new_page()
 
         print("جاري فتح الصفحة...")
-        # استخدام domcontentloaded لتفادي التعليق في networkidle
         page.goto("https://smartone-iptv.com/plugin/smart_one/main_generate", wait_until="domcontentloaded", timeout=60000)
 
-        print("انتظار تحميل عناصر الصفحة...")
-        # استهداف المدخلات الدقيقة بناءً على الـ class والـ id
-        mac_input = page.locator("input#mac, input.mac-1").first
-        mac_input.wait_for(state="visible", timeout=30000)
+        page.wait_for_timeout(3000)
+
+        print("محاولة إظهار قسم M3U Playlist...")
+        # النقر على تبويب M3U في حال وجود تبويبات مفعلة
+        try:
+            tab_btn = page.locator("a:has-text('M3u Playlist'), button:has-text('M3u Playlist'), :text('M3u Playlist')").first
+            if tab_btn.is_visible():
+                tab_btn.click()
+                page.wait_for_timeout(1000)
+        except Exception as e:
+            print(f"تخطي اختيار التبويب: {e}")
 
         print("تعبئة البيانات...")
-        mac_input.fill(mac_address)
+        # استخدام force=True لتعبئة الحقول حتى لو كانت مخفية بحيل CSS
+        mac_input = page.locator("input#mac, input.mac-1").first
+        mac_input.fill(mac_address, force=True)
 
-        # تعبئة اسم القائمة والرابط
-        page.locator("input[name='name'], input[placeholder*='Vip']").first.fill(playlist_name)
-        page.locator("input[name='url'], input[placeholder*='http']").first.fill(m3u_url)
+        name_input = page.locator("input[name='name'], input[placeholder*='Vip']").first
+        name_input.fill(playlist_name, force=True)
 
-        print("انتظار التحقق وإمكانية الضغط على الزر...")
-        page.wait_for_timeout(5000) # مهلة لضمان استقرار التحقق من Cloudflare
+        url_input = page.locator("input[name='url'], input[placeholder*='http']").first
+        url_input.fill(m3u_url, force=True)
+
+        print("انتظار التحقق وإرسال النموذج...")
+        page.wait_for_timeout(4000)
 
         submit_btn = page.locator("button:has-text('Add Playlist')").first
-        submit_btn.scroll_into_view_if_needed()
-        submit_btn.click()
+        submit_btn.click(force=True)
 
         print("تم إرسال الطلب بنجاح!")
         page.wait_for_timeout(5000)
