@@ -17,8 +17,9 @@ def main():
             args=['--no-sandbox', '--disable-setuid-sandbox']
         )
         
+        # استخدام شاشة قياسية واضحة كسطح مكتب
         context = browser.new_context(
-            viewport={"width": 1280, "height": 900},
+            viewport={"width": 1920, "height": 1080},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
         page = context.new_page()
@@ -27,33 +28,54 @@ def main():
         page.goto("https://smartone-iptv.com/plugin/smart_one/main_generate", wait_until="domcontentloaded", timeout=60000)
         page.wait_for_timeout(3000)
 
-        print("تحديد واختيار قسم M3u Playlist...")
-        # الضغط الفعلي على أيقونة M3u Playlist لتنشيط النموذج الخاص بها
-        m3u_tab = page.locator("div, p, span, a").filter(has_text="M3u Playlist").last
-        m3u_tab.click()
+        print("تفعيل تبويب M3u Playlist عبر JavaScript...")
+        # النقر المباشر على خيار M3U عبر محدد دقيق
+        page.evaluate("""
+            () => {
+                const elements = Array.from(document.querySelectorAll('div, a, button, h5, p'));
+                const m3uElem = elements.find(el => el.textContent.trim() === 'M3u Playlist');
+                if (m3uElem) {
+                    m3uElem.click();
+                }
+            }
+        """)
         page.wait_for_timeout(2000)
 
-        print("تعبئة البيانات في النموذج النشط...")
-        
-        # اختيار العناصر المرئية حصراً (.filter(has_not_class="hidden") أو إيجاد الحقل المرئي)
-        visible_mac_input = page.locator("input#mac:visible, input[name='mac']:visible").first
-        visible_mac_input.fill(mac_address)
+        print("تعبئة البيانات...")
+        # إدخال القيم باستخدام JavaScript مباشرة لتفادي مشاكل البروز والتغطية
+        page.evaluate(f"""
+            () => {{
+                const macInputs = Array.from(document.querySelectorAll("input[name='mac'], input#mac"));
+                const visibleMac = macInputs.find(i => i.offsetWidth > 0 && i.offsetHeight > 0) || macInputs[0];
+                if (visibleMac) visibleMac.value = "{mac_address}";
 
-        visible_name_input = page.locator("input[placeholder*='Vip']:visible, input[name='name']:visible").first
-        visible_name_input.fill(playlist_name)
+                const nameInputs = Array.from(document.querySelectorAll("input[name='name']"));
+                const visibleName = nameInputs.find(i => i.offsetWidth > 0 && i.offsetHeight > 0) || nameInputs[0];
+                if (visibleName) visibleName.value = "{playlist_name}";
 
-        visible_url_input = page.locator("input[placeholder*='http']:visible, input[name='url']:visible").first
-        visible_url_input.fill(m3u_url)
+                const urlInputs = Array.from(document.querySelectorAll("input[name='url']"));
+                const visibleUrl = urlInputs.find(i => i.offsetWidth > 0 && i.offsetHeight > 0) || urlInputs[0];
+                if (visibleUrl) visibleUrl.value = "{m3u_url}";
+            }}
+        """)
 
-        print("انتظار التحقق من الكابتشا والجاهزية...")
-        page.wait_for_timeout(5000)
+        print("انتظار التحقق وإرسال الطلب...")
+        page.wait_for_timeout(4000)
 
-        print("الضغط على زر Add Playlist المرئي...")
-        submit_btn = page.locator("button:has-text('Add Playlist'):visible").first
-        submit_btn.scroll_into_view_if_needed()
-        submit_btn.click()
+        # الضغط على زر Submit باستخدام JS لتجاوز قيود الرؤية
+        page.evaluate("""
+            () => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const submitBtn = buttons.find(b => b.textContent.includes('Add Playlist') && b.offsetWidth > 0);
+                if (submitBtn) {
+                    submitBtn.click();
+                } else if (buttons.length > 0) {
+                    buttons[0].click();
+                }
+            }
+        """)
 
-        print("تم إرسال البيانات بنجاح!")
+        print("تم تنفيذ عملية الإرسال بنجاح!")
         page.wait_for_timeout(5000)
         browser.close()
 
